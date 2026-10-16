@@ -71,12 +71,16 @@ jobs:
         shell: bash
         run: |
           set +e
-          flutter analyze --no-fatal-infos --no-fatal-warnings --format=machine > analyze.txt 2>&1
+          dart analyze --format=machine --no-fatal-warnings > analyze.txt 2>&1
           code=$?
-          grep '^ERROR|' analyze.txt | head -40 | while IFS='|' read -r sev type rule file line col len msg; do
+          cat analyze.txt
+          errors=$(grep -c '^ERROR|' analyze.txt)
+          grep '^ERROR|' analyze.txt | head -45 | while IFS='|' read -r sev type rule file line col len msg; do
             echo "::error file=${file#$GITHUB_WORKSPACE/},line=$line,col=$col::$rule: $msg"
           done
-          cat analyze.txt
+          if [ $code -ne 0 ] && [ "$errors" = "0" ]; then
+            head -15 analyze.txt | while read -r l; do echo "::error::$l"; done
+          fi
           exit $code
 
       - name: Tests
