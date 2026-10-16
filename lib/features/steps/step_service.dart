@@ -13,8 +13,8 @@ import '../../core/utils/units.dart';
 enum StepSource { none, sensor, healthConnect, healthKit }
 
 @immutable
-class StepState {
-  const StepState({
+class StepsState {
+  const StepsState({
     this.today = 0,
     this.source = StepSource.none,
     this.permissionDenied = false,
@@ -28,13 +28,13 @@ class StepState {
   /// yyyy-mm-dd → pasos (últimos días guardados localmente).
   final Map<String, int> history;
 
-  StepState copyWith({
+  StepsState copyWith({
     int? today,
     StepSource? source,
     bool? permissionDenied,
     Map<String, int>? history,
   }) =>
-      StepState(
+      StepsState(
         today: today ?? this.today,
         source: source ?? this.source,
         permissionDenied: permissionDenied ?? this.permissionDenied,
@@ -51,8 +51,8 @@ class StepState {
 ///
 /// Se muestra el mayor de ambos. Los datos se quedan en el teléfono: nunca se
 /// envían al proxy ni a ningún servidor.
-class StepController extends StateNotifier<StepState> {
-  StepController() : super(const StepState()) {
+class StepController extends StateNotifier<StepsState> {
+  StepController() : super(const StepsState()) {
     state = state.copyWith(history: _loadHistory());
     final todayKey = Units.dayKey(DateTime.now());
     state = state.copyWith(today: state.history[todayKey] ?? 0);
@@ -199,6 +199,6 @@ class StepController extends StateNotifier<StepState> {
   }
 }
 
-final stepProvider = StateNotifierProvider<StepController, StepState>(
+final stepProvider = StateNotifierProvider<StepController, StepsState>(
   (ref) => StepController(),
 );

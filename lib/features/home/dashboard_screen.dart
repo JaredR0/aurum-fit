@@ -185,7 +185,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
         ),
       );
 
-  Widget _stepsCard(BuildContext context, StepState steps, int goal) {
+  Widget _stepsCard(BuildContext context, StepsState steps, int goal) {
     final source = switch (steps.source) {
       StepSource.healthConnect => 'Health Connect',
       StepSource.healthKit => 'Apple Salud',

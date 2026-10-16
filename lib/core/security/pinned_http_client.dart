@@ -38,7 +38,7 @@ class PinnedHttp {
       ..connectionTimeout = const Duration(seconds: 15)
       ..idleTimeout = const Duration(seconds: 20)
       // Nunca aceptar un certificado que no valide contra las raíces fijadas.
-      ..badCertificateCallback = (X509Certificate cert, String host, int port) => false
+      ..badCertificateCallback = ((X509Certificate cert, String host, int port) => false)
       // Ignorar proxies configurados en el sistema.
       ..findProxy = (Uri uri) => 'DIRECT';
 
