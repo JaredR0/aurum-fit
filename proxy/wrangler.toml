@@ -1,0 +1,19 @@
+name = "aurum-proxy"
+main = "src/index.js"
+compatibility_date = "2025-06-01"
+
+# Variables públicas (no secretas)
+[vars]
+MODEL = "claude-sonnet-5-5"
+DAILY_LIMIT = "5"
+
+# Secretos — se configuran con `wrangler secret put`, nunca aquí:
+#   ANTHROPIC_API_KEY  (obligatorio)
+#   ACCESS_CODE        (opcional, recomendado: código que compartes con tus usuarios)
+
+# Límite de uso por instalación/IP (recomendado). Crea el KV con:
+#   npx wrangler kv namespace create RATE_KV
+# y descomenta pegando el id que te devuelve:
+# [[kv_namespaces]]
+# binding = "RATE_KV"
+# id = "PEGA_AQUI_EL_ID"

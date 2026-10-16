@@ -1,0 +1,58 @@
+name: aurum_fit
+description: "Aurum Fit — entrenamiento, nutrición y progreso gamificado, con datos cifrados en el dispositivo."
+publish_to: "none"
+
+# El número tras "+" es el versionCode de Android. El workflow de CI lo
+# reemplaza automáticamente por el número de ejecución de GitHub Actions.
+version: 1.0.0+1
+
+environment:
+  sdk: ">=3.4.0 <4.0.0"
+  flutter: ">=3.22.0"
+
+dependencies:
+  flutter:
+    sdk: flutter
+  flutter_localizations:
+    sdk: flutter
+
+  # Estado
+  flutter_riverpod: ^2.6.1
+
+  # Seguridad y persistencia cifrada
+  flutter_secure_storage: ^9.2.4   # Android Keystore / iOS Keychain
+  hive: ^2.2.3                     # Cajas cifradas con AES-256 (HiveAesCipher)
+  hive_flutter: ^1.1.0
+  crypto: ^3.0.6                   # PBKDF2 / HMAC-SHA256 para el PIN
+  local_auth: ^2.3.0               # Huella / rostro
+
+  # Red
+  http: ^1.2.2
+
+  # Sensores y salud
+  pedometer: ^4.0.2                # Sensor de pasos en tiempo real
+  health: ^12.0.0                  # Google Health Connect / Apple HealthKit
+  permission_handler: ^11.3.1
+
+  # Audio, voz y pantalla
+  flutter_tts: ^4.0.2
+  audioplayers: ^6.1.0
+  wakelock_plus: ^1.2.8
+
+  # Notificaciones locales
+  flutter_local_notifications: ^17.2.4
+  timezone: ^0.9.4
+
+  # Fotos
+  image_picker: ^1.1.2
+
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^4.0.0
+
+flutter:
+  uses-material-design: true
+  assets:
+    - assets/certs/

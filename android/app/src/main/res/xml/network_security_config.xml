@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Sin tráfico en claro y sin confiar en CAs instaladas por el usuario
+     (bloquea proxies de intercepción tipo MITM). El cliente Dart además
+     aplica su propio pinning de CA raíz (lib/core/security/pinned_http_client.dart). -->
+<network-security-config>
+    <base-config cleartextTrafficPermitted="false">
+        <trust-anchors>
+            <certificates src="system" />
+        </trust-anchors>
+    </base-config>
+</network-security-config>

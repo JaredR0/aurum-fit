@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Ícono adaptativo: una "A" dorada sobre un anillo -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+    <path
+        android:fillColor="#00000000"
+        android:strokeColor="#E8C468"
+        android:strokeWidth="3"
+        android:pathData="M54,28 A26,26 0 1,1 53.99,28 Z" />
+    <path
+        android:fillColor="#E8C468"
+        android:pathData="M54,36 L68,72 L61.5,72 L58.4,63.5 L49.6,63.5 L46.5,72 L40,72 Z M51.4,58.4 L56.6,58.4 L54,51 Z" />
+</vector>

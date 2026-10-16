@@ -1,0 +1,39 @@
+# Flutter / Dart
+.dart_tool/
+.flutter-plugins
+.flutter-plugins-dependencies
+.packages
+.pub-cache/
+.pub/
+build/
+pubspec.lock.bak
+
+# Android
+android/.gradle/
+android/local.properties
+android/gradlew
+android/gradlew.bat
+android/gradle/wrapper/gradle-wrapper.jar
+android/app/debug
+android/app/profile
+android/app/release
+android/captures/
+*.iml
+
+# SECRETOS — nunca se suben al repositorio
+.env
+*.env
+!.env.example
+android/key.properties
+*.jks
+*.keystore
+
+# Proxy
+proxy/node_modules/
+proxy/.wrangler/
+proxy/.dev.vars
+
+# IDE / SO
+.idea/
+.vscode/
+.DS_Store
