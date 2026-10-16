@@ -32,10 +32,10 @@ jobs:
 
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
 
       - name: Java 17
-        uses: actions/setup-java@v4
+        uses: actions/setup-java@v5
         with:
           distribution: temurin
           java-version: "17"
@@ -65,11 +65,31 @@ jobs:
       - name: Dependencias
         run: flutter pub get
 
+      # Los errores se publican también como anotaciones de GitHub para
+      # verlos en la pestaña "Summary" (y por la API) sin abrir el log.
       - name: Análisis estático
-        run: flutter analyze --no-fatal-infos --no-fatal-warnings
+        shell: bash
+        run: |
+          set +e
+          flutter analyze --no-fatal-infos --no-fatal-warnings --format=machine > analyze.txt 2>&1
+          code=$?
+          grep '^ERROR|' analyze.txt | head -40 | while IFS='|' read -r sev type rule file line col len msg; do
+            echo "::error file=${file#$GITHUB_WORKSPACE/},line=$line,col=$col::$rule: $msg"
+          done
+          cat analyze.txt
+          exit $code
 
       - name: Tests
-        run: flutter test
+        shell: bash
+        run: |
+          set +e
+          flutter test --reporter expanded > test.txt 2>&1
+          code=$?
+          cat test.txt
+          if [ $code -ne 0 ]; then
+            grep -nE "Expected:|Actual:|Error:|\[E\]|error:" test.txt | head -20 | while read -r l; do echo "::error::${l}"; done
+          fi
+          exit $code
 
       # La firma es opcional. Sin estos secrets el APK se firma con la clave
       # debug del runner (instala, pero no actualiza encima de builds previos).
@@ -104,11 +124,15 @@ jobs:
           if [ -z "$PROXY_URL" ]; then
             echo "::warning::Sin PROXY_URL: la app usará solo el generador local de planes."
           fi
+          set -o pipefail
           flutter build apk --release \
             --build-name="${{ steps.version.outputs.name }}" \
             --build-number="${{ steps.version.outputs.number }}" \
             --obfuscate --split-debug-info=build/symbols \
-            --dart-define=PROXY_URL="$PROXY_URL"
+            --dart-define=PROXY_URL="$PROXY_URL" 2>&1 | tee build.txt || {
+              grep -nE -A2 "error:|Error:|e: |What went wrong|> .*failed|Could not|requires" build.txt | head -20 | while read -r l; do echo "::error::${l}"; done
+              exit 1
+            }
           cp build/app/outputs/flutter-apk/app-release.apk "$APK_NAME"
           sha256sum "$APK_NAME" | tee "$APK_NAME.sha256"
 
