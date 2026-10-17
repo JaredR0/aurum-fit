@@ -72,6 +72,11 @@ REGLAS DE SEGURIDAD (obligatorias):
 - Respeta estrictamente el equipo disponible ("gym" = gimnasio completo, "calisthenics" = barras/parque, "home" = casa sin equipo).
 - Las calorías diarias deben quedar dentro de ±10 % de targets.calories y los macros cerca de los targets.
 
+PLAN ESPECÍFICO PARA EL OBJETIVO (obligatorio):
+- "goal" trae el análisis del objetivo hecho en el teléfono (desnivel, horas de subida, mochila, distancia de carrera, kilos, etc.). Úsalo: el plan debe ser claramente distinto según el objetivo, no una rutina genérica.
+- Periodiza: cada fase debe ser más específica que la anterior (de base general a simular la meta real). La app hace crecer el cardio ~7 % por semana dentro de cada fase y aplica descarga cada 4.ª semana, así que la semana modelo es el punto de partida de cada fase.
+- Si "progress" trae resultados del check-in semanal (hike_min, pack_kg, long_run_km, *_1rm, pushups, etc.), parte de esos niveles reales.
+
 PROCESO:
 1. Usa la búsqueda web (máximo 3 búsquedas) para encontrar evidencia actual y de fuentes confiables (revisiones, ACSM, NSCA, ISSN, OMS, guías oficiales) sobre el objetivo concreto del usuario.
 2. Responde SOLO con un objeto JSON válido (sin texto antes ni después, sin comentarios) con esta forma exacta:
@@ -81,14 +86,18 @@ PROCESO:
     "title": string, "summary": string (máx 600 caracteres, en español),
     "weeks": int, "progression": string (regla semanal de sobrecarga progresiva),
     "references": [string URL https de las fuentes usadas],
-    "days": [ 7 objetos, weekday 1=lunes … 7=domingo: {
-      "weekday": int, "title": string, "focus": string,
-      "requiresStepGoal": bool (true en días de descanso activo o cardio suave),
-      "exercises": [ { "name": string, "kind": "strength"|"cardio"|"mobility",
-        "sets": int, "reps": string, "restSec": int,
-        "durationSec": int|null, "distanceKm": number|null,
-        "muscles": [${MUSCLES.map((m) => `"${m}"`).join(", ")}],
-        "notes": string } ]  (lista vacía en días de descanso)
+    "phases": [ 2 a 4 fases que cubran todas las semanas (weeksAvailable), en orden: {
+      "name": string (p. ej. "Base", "Construcción", "Específica", "Puesta a punto"),
+      "focus": string, "weekFrom": int, "weekTo": int,
+      "days": [ 7 objetos = la semana modelo de la fase, weekday 1=lunes … 7=domingo: {
+        "weekday": int, "title": string, "focus": string,
+        "requiresStepGoal": bool (true en días de descanso activo o cardio suave),
+        "exercises": [ { "name": string, "kind": "strength"|"cardio"|"mobility",
+          "sets": int, "reps": string, "restSec": int,
+          "durationSec": int|null, "distanceKm": number|null,
+          "muscles": [${MUSCLES.map((m) => `"${m}"`).join(", ")}],
+          "notes": string } ]  (lista vacía en días de descanso)
+      } ]
     } ]
   },
   "nutrition": {
@@ -120,7 +129,7 @@ async function callModel(env, userContent) {
       },
       body: JSON.stringify({
         model: env.MODEL || "claude-sonnet-5-5",
-        max_tokens: 16000,
+        max_tokens: 24000,
         system: SYSTEM_PROMPT,
         tools,
         messages,

@@ -150,6 +150,7 @@ class UserProfile {
     UnitSystem? units,
     int? dailyStepGoal,
     int? waterGoalMl,
+    bool clearWaterGoal = false,
   }) {
     return UserProfile(
       sex: sex,
@@ -163,7 +164,7 @@ class UserProfile {
       injuries: injuries ?? this.injuries,
       units: units ?? this.units,
       dailyStepGoal: dailyStepGoal ?? this.dailyStepGoal,
-      waterGoalMl: waterGoalMl ?? this.waterGoalMl,
+      waterGoalMl: clearWaterGoal ? null : (waterGoalMl ?? this.waterGoalMl),
     );
   }
 

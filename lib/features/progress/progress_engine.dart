@@ -5,6 +5,9 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../core/theme/app_theme.dart';
+import '../checkin/benchmarks.dart';
+import '../checkin/checkin_logic.dart';
+import '../checkin/checkin_models.dart';
 import '../onboarding/profile_controller.dart';
 import 'muscle_group.dart';
 import 'workout_log.dart';
@@ -19,6 +22,7 @@ class MuscleProgress {
     required this.experience,
     required this.sessionsLast28,
     this.daysSinceLast,
+    this.benchmarkProgress = 0,
   });
 
   final MuscleGroup muscle;
@@ -30,6 +34,9 @@ class MuscleProgress {
   final double experience;
   final int sessionsLast28;
   final int? daysSinceLast;
+
+  /// Mejora en las pruebas del check-in semanal ligadas a este músculo (0–1).
+  final double benchmarkProgress;
 }
 
 /// Motor del "Mapa Anatómico Evolutivo".
@@ -40,8 +47,10 @@ class MuscleProgress {
 ///
 /// * Consistencia: sesiones que trabajaron el músculo en los últimos 28 días,
 ///   sobre una meta de 8 (2 por semana).
-/// * Sobrecarga progresiva: volumen medio de las 3 sesiones más recientes vs.
-///   las 3 primeras de tu historial. +50 % de volumen = puntaje completo.
+/// * Sobrecarga progresiva: lo mejor entre (a) volumen medio de las 3 sesiones
+///   más recientes vs. las 3 primeras (+50 % = completo) y (b) la mejora en
+///   las pruebas del check-in semanal ligadas al músculo (1RM, repeticiones,
+///   minutos de caminata, km…).
 /// * Experiencia: sesiones acumuladas sobre 36 (≈ 4 meses a 2 por semana).
 /// * Inactividad: tras 14 días sin trabajar el músculo, el dorado se apaga
 ///   gradualmente (hasta un 60 %), igual que la adaptación real.
@@ -56,10 +65,21 @@ class ProgressEngine {
     List<WorkoutSession> sessions, {
     required double bodyweightKg,
     DateTime? now,
+    Map<String, double> benchmarkScores = const {},
   }) {
     final today = now ?? DateTime.now();
     final sorted = [...sessions]..sort((a, b) => a.date.compareTo(b.date));
     final result = <MuscleGroup, MuscleProgress>{};
+
+    // Mejor puntaje de prueba por músculo.
+    final bench = <MuscleGroup, double>{};
+    for (final e in benchmarkScores.entries) {
+      final b = Benchmarks.byId(e.key);
+      if (b == null) continue;
+      for (final m in b.muscles) {
+        bench[m] = max(bench[m] ?? 0, e.value);
+      }
+    }
 
     for (final muscle in MuscleGroup.values) {
       final volumes = <({DateTime date, double volume})>[];
@@ -71,14 +91,16 @@ class ProgressEngine {
         if (v > 0) volumes.add((date: s.date, volume: v));
       }
 
+      final benchProg = bench[muscle] ?? 0;
       if (volumes.isEmpty) {
         result[muscle] = MuscleProgress(
           muscle: muscle,
-          score: 0,
+          score: (0.35 * benchProg).clamp(0.0, 1.0).toDouble(),
           consistency: 0,
-          progression: 0,
+          progression: benchProg,
           experience: 0,
           sessionsLast28: 0,
+          benchmarkProgress: benchProg,
         );
         continue;
       }
@@ -98,6 +120,7 @@ class ProgressEngine {
           progression = ((latest / baseline - 1) / 0.5).clamp(0.0, 1.0).toDouble();
         }
       }
+      progression = max(progression, benchProg);
 
       final daysSinceLast = today.difference(volumes.last.date).inDays;
       final decay = daysSinceLast <= 14
@@ -118,6 +141,7 @@ class ProgressEngine {
         experience: experience,
         sessionsLast28: recent28,
         daysSinceLast: daysSinceLast,
+        benchmarkProgress: benchProg,
       );
     }
     return result;
@@ -174,8 +198,10 @@ class ProgressEngine {
 final progressProvider = Provider<Map<MuscleGroup, MuscleProgress>>((ref) {
   final sessions = ref.watch(workoutLogProvider);
   final profile = ref.watch(profileProvider);
+  final checkins = ref.watch(checkinProvider);
   return ProgressEngine.compute(
     sessions,
     bodyweightKg: profile?.weightKg ?? 70,
+    benchmarkScores: CheckinLogic.benchmarkScores(checkins),
   );
 });

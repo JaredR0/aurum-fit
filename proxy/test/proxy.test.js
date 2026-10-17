@@ -124,3 +124,33 @@ test("worker: rutas desconocidas → 404 y sin datos internos", async () => {
   assert.equal(res.status, 404);
   assert.equal(res.headers.get("cache-control"), "no-store");
 });
+
+test("validatePlan acepta fases y descarta las vacías", () => {
+  const phased = {
+    training: {
+      title: "Acatenango",
+      weeks: 12,
+      phases: [
+        { name: "Base", weekFrom: 1, weekTo: 5, days: [{ weekday: 6, title: "Caminata", exercises: [{ name: "Caminata", kind: "cardio", durationSec: 5400 }] }] },
+        { name: "Vacía", weekFrom: 6, weekTo: 8, days: [] },
+        { name: "Específica", weekFrom: 6, weekTo: 99, days: [{ weekday: 6, title: "Larga", exercises: [{ name: "Caminata", kind: "cardio", durationSec: 12600 }] }] },
+      ],
+    },
+    nutrition: modelPlan.nutrition,
+  };
+  const plan = validatePlan(phased);
+  assert.equal(plan.training.phases.length, 2);
+  assert.equal(plan.training.phases[1].weekTo, 52);
+  assert.equal(plan.training.days, undefined);
+});
+
+test("validateRequest normaliza goal y progress", () => {
+  const out = validateRequest({
+    ...goodBody,
+    goal: { type: "mountain", headline: "Volcán Acatenango · 3,976 m", elevationGainM: 1500, packKg: 99 },
+    progress: { hike_min: 120, pack_kg: 6.25, "bad key!": 5, x: "texto" },
+  });
+  assert.equal(out.goal.packKg, 30);
+  assert.equal(out.goal.elevationGainM, 1500);
+  assert.deepEqual(out.progress, { hike_min: 120, pack_kg: 6.3 });
+});

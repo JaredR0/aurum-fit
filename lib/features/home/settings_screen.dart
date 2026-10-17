@@ -10,6 +10,7 @@ import '../../core/theme/app_theme.dart';
 import '../../core/utils/units.dart';
 import '../auth/auth_controller.dart';
 import '../auth/pin_setup_screen.dart';
+import '../checkin/checkin_models.dart';
 import '../hydration/hydration_controller.dart';
 import '../notifications/notification_service.dart';
 import '../onboarding/profile_controller.dart';
@@ -123,6 +124,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
     ref.invalidate(workoutLogProvider);
     ref.invalidate(photoProvider);
     ref.invalidate(hydrationProvider);
+    ref.invalidate(checkinProvider);
     ref.read(authProvider.notifier).reset();
     if (mounted) Navigator.of(context).popUntil((r) => r.isFirst);
   }
@@ -219,6 +221,12 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                 '${_reminders.workoutHour.toString().padLeft(2, '0')}:${_reminders.workoutMinute.toString().padLeft(2, '0')}'),
             value: _reminders.workout,
             onChanged: (v) => _applyReminders(_reminders.copyWith(workout: v)),
+          ),
+          SwitchListTile(
+            title: const Text('Check-in semanal'),
+            subtitle: const Text('Sábado 10:00 — qué lograste en la semana'),
+            value: _reminders.checkin,
+            onChanged: (v) => _applyReminders(_reminders.copyWith(checkin: v)),
           ),
           ListTile(
             title: const Text('Cambiar hora del entrenamiento'),

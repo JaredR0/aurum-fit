@@ -25,7 +25,15 @@ class PlanController extends StateNotifier<PlanState> {
 
   static FitnessPlan? _load() {
     final json = LocalDb.readJson(LocalDb.plans, _key);
-    return json == null ? null : FitnessPlan.tryParse(json);
+    final plan = json == null ? null : FitnessPlan.tryParse(json);
+    // Los planes locales de la versión 1 eran una sola semana repetida: se
+    // regeneran con el nuevo generador periodizado.
+    if (plan != null &&
+        plan.training.source == 'local' &&
+        plan.training.schemaVersion < TrainingPlan.currentSchema) {
+      return null;
+    }
+    return plan;
   }
 
   Future<void> _save(FitnessPlan plan, {String? message}) async {
@@ -39,10 +47,15 @@ class PlanController extends StateNotifier<PlanState> {
 
   /// Plan con IA + búsqueda de evidencia. Si falla, se conserva el plan
   /// actual (o se genera uno local) y se informa el motivo.
-  Future<void> generateWithAi(UserProfile profile, {String request = ''}) async {
+  Future<void> generateWithAi(
+    UserProfile profile, {
+    String request = '',
+    Map<String, double> progress = const {},
+  }) async {
     state = PlanState(plan: state.plan, loading: true);
     try {
-      final plan = await PlanApi.generate(profile, extraRequest: request);
+      final plan = await PlanApi.generate(profile,
+          extraRequest: request, progress: progress);
       await _save(plan, message: 'Plan generado con IA.');
     } on PlanApiException catch (e) {
       final fallback = state.plan ?? LocalPlanGenerator.generate(profile);

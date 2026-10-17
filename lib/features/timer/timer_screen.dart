@@ -4,16 +4,20 @@ import 'package:flutter/material.dart';
 import 'package:wakelock_plus/wakelock_plus.dart';
 
 import '../../core/theme/app_theme.dart';
+import '../plan/plan_models.dart';
+import '../plan/session_log_screen.dart';
 import 'interval_engine.dart';
 import 'voice_coach.dart';
 
 /// Asistente de circuito / HIIT / boxeo con números gigantes, voz, tonos y
 /// vibración. Mantiene la pantalla encendida mientras corre.
 class TimerScreen extends StatefulWidget {
-  const TimerScreen({super.key, this.program});
+  const TimerScreen({super.key, required this.program, this.logDay});
 
-  /// Si viene de un día del plan, se usa ese circuito.
-  final IntervalProgram? program;
+  final IntervalProgram program;
+
+  /// Ejercicios para registrar la sesión al terminar (cuenta en el mapa).
+  final TrainingDay? logDay;
 
   @override
   State<TimerScreen> createState() => _TimerScreenState();
@@ -21,17 +25,12 @@ class TimerScreen extends StatefulWidget {
 
 class _TimerScreenState extends State<TimerScreen> {
   final VoiceCoach _coach = VoiceCoach();
-  late IntervalProgram _program = widget.program ?? IntervalProgram.hiit();
+  late final IntervalProgram _program = widget.program;
   IntervalSession? _session;
   Timer? _ticker;
   final Stopwatch _clock = Stopwatch();
   Duration _lastTick = Duration.zero;
   bool _running = false;
-
-  // Configuración del modo personalizado
-  int _work = 45;
-  int _rest = 15;
-  int _rounds = 8;
 
   @override
   void initState() {
@@ -45,11 +44,6 @@ class _TimerScreenState extends State<TimerScreen> {
     _coach.dispose();
     WakelockPlus.disable();
     super.dispose();
-  }
-
-  void _select(IntervalProgram p) {
-    _stop();
-    setState(() => _program = p);
   }
 
   void _start() {
@@ -175,7 +169,6 @@ class _TimerScreenState extends State<TimerScreen> {
       body: SafeArea(
         child: Column(
           children: [
-            if (widget.program == null && s == null) _presets(),
             Expanded(
               child: Center(
                 child: Column(
@@ -244,6 +237,19 @@ class _TimerScreenState extends State<TimerScreen> {
                 ),
               ),
             ),
+            if (finished && widget.logDay != null)
+              Padding(
+                padding: const EdgeInsets.fromLTRB(24, 0, 24, 16),
+                child: FilledButton.icon(
+                  onPressed: () => Navigator.of(context).pushReplacement(
+                    MaterialPageRoute<bool>(
+                      builder: (_) => SessionLogScreen(day: widget.logDay!),
+                    ),
+                  ),
+                  icon: const Icon(Icons.edit_note),
+                  label: const Text('Registrar en mi progreso'),
+                ),
+              ),
             Padding(
               padding: const EdgeInsets.fromLTRB(24, 0, 24, 24),
               child: Row(
@@ -280,104 +286,6 @@ class _TimerScreenState extends State<TimerScreen> {
             ),
           ],
         ),
-      ),
-    );
-  }
-
-  Widget _presets() {
-    final presets = <(String, IntervalProgram Function())>[
-      ('HIIT 40/20', IntervalProgram.hiit),
-      ('Tabata', IntervalProgram.tabata),
-      ('Boxeo 3′', () => IntervalProgram.boxing()),
-      ('Cuerda', IntervalProgram.jumpRope),
-    ];
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(16, 8, 16, 0),
-      child: Wrap(
-        spacing: 8,
-        runSpacing: 8,
-        alignment: WrapAlignment.center,
-        children: [
-          for (final (label, build) in presets)
-            ChoiceChip(
-              label: Text(label),
-              selected: _program.name == build().name,
-              onSelected: (_) => _select(build()),
-            ),
-          ActionChip(
-            avatar: const Icon(Icons.tune, size: 18),
-            label: const Text('Personalizado'),
-            onPressed: _customSheet,
-          ),
-        ],
-      ),
-    );
-  }
-
-  Future<void> _customSheet() async {
-    await showModalBottomSheet<void>(
-      context: context,
-      showDragHandle: true,
-      builder: (context) => StatefulBuilder(
-        builder: (context, setSheet) {
-          Widget stepper(String label, int value, int step, int min, int max,
-                  ValueChanged<int> onChanged) =>
-              ListTile(
-                title: Text(label),
-                trailing: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    IconButton(
-                      icon: const Icon(Icons.remove_circle_outline),
-                      onPressed: value - step >= min
-                          ? () => setSheet(() => onChanged(value - step))
-                          : null,
-                    ),
-                    SizedBox(
-                      width: 48,
-                      child: Text('$value',
-                          textAlign: TextAlign.center,
-                          style: const TextStyle(
-                              fontSize: 18, fontWeight: FontWeight.w700)),
-                    ),
-                    IconButton(
-                      icon: const Icon(Icons.add_circle_outline),
-                      onPressed: value + step <= max
-                          ? () => setSheet(() => onChanged(value + step))
-                          : null,
-                    ),
-                  ],
-                ),
-              );
-
-          return Padding(
-            padding: const EdgeInsets.fromLTRB(8, 0, 8, 24),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                stepper('Trabajo (s)', _work, 5, 5, 600, (v) => _work = v),
-                stepper('Descanso (s)', _rest, 5, 0, 300, (v) => _rest = v),
-                stepper('Rondas', _rounds, 1, 1, 50, (v) => _rounds = v),
-                const SizedBox(height: 12),
-                Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 16),
-                  child: FilledButton(
-                    onPressed: () {
-                      _select(IntervalProgram.intervals(
-                        name: 'Personalizado $_work/$_rest × $_rounds',
-                        workSec: _work,
-                        restSec: _rest,
-                        rounds: _rounds,
-                      ));
-                      Navigator.of(context).pop();
-                    },
-                    child: const Text('Usar este intervalo'),
-                  ),
-                ),
-              ],
-            ),
-          );
-        },
       ),
     );
   }

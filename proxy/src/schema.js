@@ -85,10 +85,35 @@ export function validateRequest(body) {
   };
   const request = cleanText(body.request, 300);
 
-  for (const text of [profile.injuries, profile.goalText, request]) {
+  // Análisis del objetivo hecho en el teléfono (solo números y un titular).
+  const g = body.goal && typeof body.goal === "object" ? body.goal : {};
+  const optNum = (v, min, max) => (v == null ? null : num(v, min, max, null));
+  const goal = {
+    type: oneOf(g.type, GOALS, profile.goalType),
+    headline: cleanText(g.headline, 80),
+    elevationGainM: optNum(g.elevationGainM, 100, 4000),
+    ascentHours: optNum(g.ascentHours, 0.5, 14),
+    packKg: optNum(g.packKg, 1, 30),
+    distanceKm: optNum(g.distanceKm, 1, 100),
+    raceMinutes: optNum(g.raceMinutes, 10, 600),
+    weightChangeKg: optNum(g.weightChangeKg, -40, 20),
+    liftTargetKg: optNum(g.liftTargetKg, 10, 400),
+  };
+
+  // Últimos resultados del check-in semanal: ids conocidos → número.
+  const progress = {};
+  if (body.progress && typeof body.progress === "object") {
+    for (const [k, v] of Object.entries(body.progress).slice(0, 16)) {
+      if (/^[a-z0-9_]{2,24}$/.test(k) && Number.isFinite(v)) {
+        progress[k] = Math.round(num(v, 0, 100000, 0) * 10) / 10;
+      }
+    }
+  }
+
+  for (const text of [profile.injuries, profile.goalText, request, goal.headline]) {
     if (looksLikeInjection(text)) return null;
   }
-  return { profile, targets, request };
+  return { profile, targets, request, goal, progress };
 }
 
 function exercise(e) {
@@ -152,12 +177,32 @@ export function validatePlan(raw, extraReferences = []) {
   const tr = raw.training || {};
   const nu = raw.nutrition || {};
 
-  const byDay = new Map();
-  for (const d of arr(tr.days, 7).map(trainingDay).filter(Boolean)) {
-    byDay.set(d.weekday, d);
-  }
-  const days = [...byDay.values()].sort((a, b) => a.weekday - b.weekday);
-  if (days.length === 0) return null;
+  const week = (rawDays) => {
+    const byDay = new Map();
+    for (const d of arr(rawDays, 7).map(trainingDay).filter(Boolean)) {
+      byDay.set(d.weekday, d);
+    }
+    return [...byDay.values()].sort((a, b) => a.weekday - b.weekday);
+  };
+
+  // Formato nuevo: fases con una semana modelo. Formato antiguo: days.
+  const phases = arr(tr.phases, 4)
+    .map((p) => {
+      if (!p || typeof p !== "object") return null;
+      const days = week(p.days);
+      if (days.length === 0) return null;
+      const weekFrom = int(p.weekFrom, 1, 52, 1);
+      return {
+        name: cleanText(p.name, 40) || "Fase",
+        focus: cleanText(p.focus, 200),
+        weekFrom,
+        weekTo: int(p.weekTo, weekFrom, 52, weekFrom),
+        days,
+      };
+    })
+    .filter(Boolean);
+  const days = phases.length ? [] : week(tr.days);
+  if (phases.length === 0 && days.length === 0) return null;
 
   const nutritionDays = arr(nu.days, 7)
     .map((d) => {
@@ -181,7 +226,7 @@ export function validatePlan(raw, extraReferences = []) {
       references: [...new Set(refs)].slice(0, 8),
       source: "ai",
       createdAt: new Date().toISOString(),
-      days,
+      ...(phases.length ? { phases } : { days }),
     },
     nutrition: {
       calories: int(nu.calories, 1000, 6000, 2000),

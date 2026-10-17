@@ -9,6 +9,7 @@ import '../../core/security/input_sanitizer.dart';
 import '../../core/security/pinned_http_client.dart';
 import '../../core/security/secure_vault.dart';
 import '../onboarding/user_profile.dart';
+import 'goal_analyzer.dart';
 import 'local_plan_generator.dart';
 import 'plan_models.dart';
 
@@ -49,6 +50,7 @@ class PlanApi {
   static Future<FitnessPlan> generate(
     UserProfile profile, {
     String extraRequest = '',
+    Map<String, double> progress = const {},
   }) async {
     if (!Env.hasProxy) {
       throw const PlanApiException(
@@ -61,12 +63,30 @@ class PlanApi {
           'Tu petición contiene frases que parecen instrucciones para la IA. Reescríbela con tus palabras.');
     }
 
-    final targets = LocalPlanGenerator.targets(profile);
+    final spec = GoalAnalyzer.analyze(profile);
+    final targets = LocalPlanGenerator.targets(profile, spec);
+    // Plan local de referencia: aporta las metas medibles del check-in.
+    final reference = LocalPlanGenerator.generate(profile).training;
     final payload = jsonEncode({
       'schemaVersion': 1,
       'locale': 'es-GT',
       'profile': profile.toAnonymizedJson(),
       'request': extra.text,
+      'goal': {
+        'type': spec.type.name,
+        'headline': spec.headline,
+        'elevationGainM': spec.elevationGainM,
+        'ascentHours': spec.ascentHours,
+        'packKg': spec.packKg,
+        'distanceKm': spec.distanceKm,
+        'raceMinutes': spec.raceMinutes,
+        'weightChangeKg': spec.weightChangeKg,
+        'liftTargetKg': spec.liftTargetKg,
+      },
+      // Últimos resultados del check-in semanal (solo números).
+      'progress': {
+        for (final e in progress.entries.take(16)) e.key: e.value,
+      },
       'targets': {
         'calories': targets.calories,
         'proteinG': targets.proteinG,
@@ -113,21 +133,28 @@ class PlanApi {
       }
 
       final decoded = jsonDecode(utf8.decode(res.bodyBytes));
-      final plan = FitnessPlan.tryParse(decoded, source: 'ai');
-      if (plan == null) {
+      final parsed = FitnessPlan.tryParse(decoded, source: 'ai');
+      if (parsed == null) {
         throw const PlanApiException(
             'La respuesta de la IA no pasó la validación; se descartó.');
       }
 
       // Control de cordura: la IA no puede desviarse demasiado de las
       // calorías calculadas en el dispositivo.
-      final drift = (plan.nutrition.calories - targets.calories).abs() /
+      final drift = (parsed.nutrition.calories - targets.calories).abs() /
           targets.calories;
       if (drift > 0.35) {
         throw const PlanApiException(
             'Las calorías propuestas por la IA eran poco realistas; se descartó el plan.');
       }
-      return plan;
+      return FitnessPlan(
+        training: parsed.training.withGoal(
+          headline: reference.goalHeadline,
+          facts: reference.goalFacts,
+          goalTargets: reference.targets,
+        ),
+        nutrition: parsed.nutrition,
+      );
     } on PlanApiException {
       rethrow;
     } on HandshakeException {

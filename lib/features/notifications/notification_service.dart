@@ -22,6 +22,7 @@ class NotificationService {
   static const int _mealBase = 100;
   static const int _waterBase = 200;
   static const int _workoutId = 300;
+  static const int _checkinId = 400;
 
   static const String settingsKey = 'reminders';
 
@@ -108,6 +109,29 @@ class NotificationService {
       await _daily(_workoutId, s.workoutHour, s.workoutMinute,
           'Entrenamiento', 'Tu sesión de hoy te espera.');
     }
+
+    if (s.checkin) {
+      await _plugin.zonedSchedule(
+        _checkinId,
+        'Check-in semanal',
+        'Cuéntale a Aurum Fit qué lograste esta semana.',
+        _nextWeekday(DateTime.saturday, 10, 0),
+        _details,
+        androidScheduleMode: AndroidScheduleMode.inexactAllowWhileIdle,
+        uiLocalNotificationDateInterpretation:
+            UILocalNotificationDateInterpretation.absoluteTime,
+        matchDateTimeComponents: DateTimeComponents.dayOfWeekAndTime,
+      );
+    }
+  }
+
+  static tz.TZDateTime _nextWeekday(int weekday, int hour, int minute) {
+    final now = DateTime.now();
+    var local = DateTime(now.year, now.month, now.day, hour, minute);
+    while (local.weekday != weekday || !local.isAfter(now)) {
+      local = local.add(const Duration(days: 1));
+    }
+    return tz.TZDateTime.from(local, tz.UTC);
   }
 
   static Future<void> _daily(
@@ -148,6 +172,7 @@ class ReminderSettings {
     this.meals = false,
     this.water = false,
     this.workout = false,
+    this.checkin = false,
     this.waterStartHour = 8,
     this.waterEndHour = 20,
     this.waterEveryHours = 2,
@@ -158,18 +183,20 @@ class ReminderSettings {
   final bool meals;
   final bool water;
   final bool workout;
+  final bool checkin;
   final int waterStartHour;
   final int waterEndHour;
   final int waterEveryHours;
   final int workoutHour;
   final int workoutMinute;
 
-  bool get any => meals || water || workout;
+  bool get any => meals || water || workout || checkin;
 
   ReminderSettings copyWith({
     bool? meals,
     bool? water,
     bool? workout,
+    bool? checkin,
     int? workoutHour,
     int? workoutMinute,
   }) =>
@@ -177,6 +204,7 @@ class ReminderSettings {
         meals: meals ?? this.meals,
         water: water ?? this.water,
         workout: workout ?? this.workout,
+        checkin: checkin ?? this.checkin,
         waterStartHour: waterStartHour,
         waterEndHour: waterEndHour,
         waterEveryHours: waterEveryHours,
@@ -188,6 +216,7 @@ class ReminderSettings {
         'meals': meals,
         'water': water,
         'workout': workout,
+        'checkin': checkin,
         'waterStartHour': waterStartHour,
         'waterEndHour': waterEndHour,
         'waterEveryHours': waterEveryHours,
@@ -201,6 +230,7 @@ class ReminderSettings {
       meals: j['meals'] == true,
       water: j['water'] == true,
       workout: j['workout'] == true,
+      checkin: j['checkin'] == true,
       waterStartHour: hour(j['waterStartHour'], 8),
       waterEndHour: hour(j['waterEndHour'], 20),
       waterEveryHours: (j['waterEveryHours'] is int &&

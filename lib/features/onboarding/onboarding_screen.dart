@@ -5,6 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../core/security/input_sanitizer.dart';
 import '../../core/theme/app_theme.dart';
 import '../../core/utils/units.dart';
+import '../plan/local_plan_generator.dart';
 import 'profile_controller.dart';
 import 'user_profile.dart';
 
@@ -147,6 +148,7 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
       equipment: _equipment!,
       injuries: InputSanitizer.clean(_injuries.text).text,
       units: _units,
+      dailyStepGoal: LocalPlanGenerator.defaultStepGoal(_goalType, _activity),
       goal: Goal(
         type: _goalType,
         description: InputSanitizer.clean(_goalText.text, maxLength: 200).text,

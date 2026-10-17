@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../core/theme/app_theme.dart';
+import '../checkin/achievements_tab.dart';
 import 'body_map.dart';
 import 'muscle_group.dart';
 import 'progress_engine.dart';
@@ -24,12 +25,31 @@ class _ProgressScreenState extends ConsumerState<ProgressScreen> {
     final sessions = ref.watch(workoutLogProvider);
     final overall = ProgressEngine.overall(progress);
 
-    return Scaffold(
-      appBar: AppBar(title: const Text('Mapa evolutivo')),
-      body: ListView(
-        padding: const EdgeInsets.fromLTRB(16, 0, 16, 24),
+    return DefaultTabController(
+      length: 2,
+      child: Scaffold(
+        appBar: AppBar(
+          title: const Text('Progreso'),
+          bottom: const TabBar(
+            tabs: [Tab(text: 'Mapa del cuerpo'), Tab(text: 'Logros')],
+          ),
+        ),
+        body: TabBarView(
+          children: [
+            _mapTab(progress, sessions.length, overall),
+            const AchievementsTab(),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _mapTab(
+      Map<MuscleGroup, MuscleProgress> progress, int sessionCount, double overall) {
+    return ListView(
+        padding: const EdgeInsets.fromLTRB(16, 12, 16, 24),
         children: [
-          _OverallCard(score: overall, sessions: sessions.length),
+          _OverallCard(score: overall, sessions: sessionCount),
           const SizedBox(height: 16),
           Center(
             child: SegmentedButton<BodySide>(
@@ -85,8 +105,7 @@ class _ProgressScreenState extends ConsumerState<ProgressScreen> {
                     ),
                   )),
         ],
-      ),
-    );
+      );
   }
 }
 
@@ -242,6 +261,9 @@ class _MuscleDetail extends StatelessWidget {
             _bar('Sobrecarga progresiva', p.progression,
                 'Volumen reciente vs. tus primeras sesiones'),
             _bar('Experiencia', p.experience, 'Sesiones acumuladas (meta: 36)'),
+            if (p.benchmarkProgress > 0)
+              _bar('Récords del check-in', p.benchmarkProgress,
+                  'Mejora en tus pruebas semanales ligadas a este músculo'),
             if ((p.daysSinceLast ?? 0) > 14)
               Padding(
                 padding: const EdgeInsets.only(top: 10),

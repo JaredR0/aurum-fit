@@ -83,7 +83,8 @@ void main() {
 
     test('plan de montaña: 7 días, caminata larga que exige pasos', () {
       final plan = LocalPlanGenerator.generate(_profile());
-      expect(plan.training.days.length, 7);
+      expect(plan.training.totalWeeks, greaterThanOrEqualTo(11));
+      expect(plan.training.weeks.first.days.length, 7);
       expect(plan.nutrition.days.length, 7);
       expect(plan.nutrition.days.first.meals.length, 5);
       final saturday = plan.training.dayFor(DateTime(2026, 10, 17))!; // sábado
@@ -93,7 +94,8 @@ void main() {
     test('respeta equipo y lesiones', () {
       final home = LocalPlanGenerator.generate(
           _profile(goal: GoalType.muscle, eq: Equipment.home, injuries: 'dolor de rodilla'));
-      final names = home.training.days
+      final names = home.training.weeks
+          .expand((w) => w.days)
           .expand((d) => d.exercises)
           .map((e) => e.name.toLowerCase())
           .toList();
@@ -105,7 +107,8 @@ void main() {
       final plan = LocalPlanGenerator.generate(_profile());
       final round = FitnessPlan.tryParse(jsonDecode(jsonEncode(plan.toJson())));
       expect(round, isNotNull);
-      expect(round!.training.days.length, 7);
+      expect(round!.training.weeks.length, plan.training.weeks.length);
+      expect(round.training.targets.length, plan.training.targets.length);
 
       final hostile = {
         'training': {
@@ -133,7 +136,7 @@ void main() {
         },
       };
       final parsed = FitnessPlan.tryParse(hostile)!;
-      final day = parsed.training.days.single;
+      final day = parsed.training.weeks.single.days.single;
       expect(day.weekday, 7);
       expect(day.exercises.single.sets, 12);
       expect(day.exercises.single.muscles.length, 1);

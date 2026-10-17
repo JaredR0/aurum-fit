@@ -7,7 +7,7 @@ name: Build APK
 # - Pull requests     → solo compila y prueba, no publica nada.
 on:
   push:
-    branches: [main]
+    branches: [main, "dev/**"]
     tags: ["v*"]
   pull_request:
     branches: [main]

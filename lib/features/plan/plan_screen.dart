@@ -3,6 +3,8 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../core/theme/app_theme.dart';
+import '../checkin/checkin_logic.dart';
+import '../checkin/checkin_models.dart';
 import '../onboarding/profile_controller.dart';
 import '../timer/interval_engine.dart';
 import '../timer/timer_screen.dart';
@@ -81,9 +83,11 @@ class PlanScreen extends ConsumerWidget {
     );
     // No se hace dispose aquí: el diálogo aún anima su salida con este controller.
     if (request == null) return;
+    final progress =
+        CheckinLogic.firstAndLast(ref.read(checkinProvider)).last;
     await ref
         .read(planProvider.notifier)
-        .generateWithAi(profile, request: request);
+        .generateWithAi(profile, request: request, progress: progress);
   }
 
   @override
@@ -145,91 +149,116 @@ class PlanScreen extends ConsumerWidget {
   }
 }
 
-class _TrainingTab extends StatelessWidget {
+class _TrainingTab extends ConsumerStatefulWidget {
   const _TrainingTab({required this.plan});
 
   final TrainingPlan plan;
 
   @override
+  ConsumerState<_TrainingTab> createState() => _TrainingTabState();
+}
+
+class _TrainingTabState extends ConsumerState<_TrainingTab> {
+  int? _week;
+
+  @override
   Widget build(BuildContext context) {
-    final today = DateTime.now().weekday;
+    final plan = widget.plan;
+    final checkins = ref.watch(checkinProvider);
+    final now = DateTime.now();
+    final currentWeek = plan.weekNumberFor(now);
+    final weekNumber = (_week ?? currentWeek).clamp(1, plan.totalWeeks).toInt();
+    final week = CheckinLogic.effectiveWeek(plan, weekNumber, checkins);
+    final isCurrent = weekNumber == currentWeek;
+    final today = now.weekday;
+
     return ListView(
       padding: const EdgeInsets.fromLTRB(16, 16, 16, 32),
       children: [
+        _goalCard(context, plan),
+        const SizedBox(height: 16),
+        _phaseStrip(plan, weekNumber),
+        const SizedBox(height: 12),
         Card(
           child: Padding(
-            padding: const EdgeInsets.all(16),
+            padding: const EdgeInsets.fromLTRB(4, 8, 4, 12),
             child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Row(
                   children: [
-                    Expanded(
-                      child: Text(plan.title,
-                          style: Theme.of(context).textTheme.titleLarge),
+                    IconButton(
+                      tooltip: 'Semana anterior',
+                      onPressed: weekNumber > 1
+                          ? () => setState(() => _week = weekNumber - 1)
+                          : null,
+                      icon: const Icon(Icons.chevron_left),
                     ),
-                    Chip(
-                      visualDensity: VisualDensity.compact,
-                      avatar: Icon(
-                        plan.source == 'ai' ? Icons.auto_awesome : Icons.offline_bolt,
-                        size: 16,
-                        color: AurumColors.gold,
+                    Expanded(
+                      child: Column(
+                        children: [
+                          Text(
+                            'Semana $weekNumber de ${plan.totalWeeks}',
+                            style: Theme.of(context)
+                                .textTheme
+                                .titleMedium
+                                ?.copyWith(fontWeight: FontWeight.w700),
+                          ),
+                          Text(
+                            '${week.phase}${isCurrent ? ' · esta semana' : ''}',
+                            style: const TextStyle(color: AurumColors.gold, fontSize: 13),
+                          ),
+                        ],
                       ),
-                      label: Text(plan.source == 'ai' ? 'IA' : 'Local'),
+                    ),
+                    IconButton(
+                      tooltip: 'Semana siguiente',
+                      onPressed: weekNumber < plan.totalWeeks
+                          ? () => setState(() => _week = weekNumber + 1)
+                          : null,
+                      icon: const Icon(Icons.chevron_right),
                     ),
                   ],
                 ),
-                const SizedBox(height: 8),
-                Text(plan.summary,
-                    style: const TextStyle(color: AurumColors.textMuted)),
-                if (plan.progression.isNotEmpty) ...[
-                  const SizedBox(height: 12),
-                  const Text('Sobrecarga progresiva',
-                      style: TextStyle(fontWeight: FontWeight.w600)),
-                  const SizedBox(height: 4),
-                  Text(plan.progression),
-                ],
-                if (plan.references.isNotEmpty) ...[
-                  const SizedBox(height: 12),
-                  const Text('Evidencia consultada',
-                      style: TextStyle(fontWeight: FontWeight.w600)),
-                  for (final r in plan.references)
-                    InkWell(
-                      onTap: () {
-                        Clipboard.setData(ClipboardData(text: r));
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(content: Text('Enlace copiado')),
-                        );
-                      },
-                      child: Padding(
-                        padding: const EdgeInsets.symmetric(vertical: 2),
-                        child: Text(
-                          r,
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                          style: const TextStyle(
-                              color: AurumColors.amber, fontSize: 12),
-                        ),
-                      ),
+                if (week.deload)
+                  const Padding(
+                    padding: EdgeInsets.only(top: 4),
+                    child: Chip(
+                      avatar: Icon(Icons.battery_charging_full, size: 16, color: AurumColors.rest),
+                      label: Text('Semana de descarga'),
                     ),
-                ],
+                  ),
+                if (week.focus.isNotEmpty)
+                  Padding(
+                    padding: const EdgeInsets.fromLTRB(16, 6, 16, 0),
+                    child: Text(
+                      week.focus,
+                      textAlign: TextAlign.center,
+                      style: const TextStyle(color: AurumColors.textMuted, fontSize: 13),
+                    ),
+                  ),
+                if (!isCurrent)
+                  TextButton(
+                    onPressed: () => setState(() => _week = null),
+                    child: const Text('Volver a esta semana'),
+                  ),
               ],
             ),
           ),
         ),
-        const SizedBox(height: 16),
-        for (final day in plan.days)
+        const SizedBox(height: 12),
+        for (final day in week.days)
           Padding(
             padding: const EdgeInsets.only(bottom: 10),
             child: Card(
               child: ExpansionTile(
-                initiallyExpanded: day.weekday == today,
+                key: PageStorageKey('w$weekNumber-d${day.weekday}'),
+                initiallyExpanded: isCurrent && day.weekday == today,
                 shape: const Border(),
                 leading: CircleAvatar(
-                  backgroundColor: day.weekday == today
+                  backgroundColor: isCurrent && day.weekday == today
                       ? AurumColors.gold
                       : AurumColors.surfaceHigh,
-                  foregroundColor: day.weekday == today
+                  foregroundColor: isCurrent && day.weekday == today
                       ? AurumColors.background
                       : AurumColors.text,
                   child: Text(_weekdays[day.weekday - 1],
@@ -263,6 +292,7 @@ class _TrainingTab extends StatelessWidget {
                                 MaterialPageRoute<void>(
                                   builder: (_) => TimerScreen(
                                     program: IntervalProgram.fromTrainingDay(day),
+                                    logDay: day,
                                   ),
                                 ),
                               ),
@@ -287,6 +317,155 @@ class _TrainingTab extends StatelessWidget {
                         ],
                       ),
                     ),
+                ],
+              ),
+            ),
+          ),
+        if (plan.progression.isNotEmpty)
+          Card(
+            child: Padding(
+              padding: const EdgeInsets.all(16),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Text('Cómo progresa tu plan',
+                      style: TextStyle(fontWeight: FontWeight.w600)),
+                  const SizedBox(height: 4),
+                  Text(plan.progression,
+                      style: const TextStyle(color: AurumColors.textMuted)),
+                ],
+              ),
+            ),
+          ),
+        if (plan.references.isNotEmpty) ...[
+          const SizedBox(height: 12),
+          const Text('Evidencia consultada',
+              style: TextStyle(fontWeight: FontWeight.w600)),
+          for (final r in plan.references)
+            InkWell(
+              onTap: () {
+                Clipboard.setData(ClipboardData(text: r));
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(content: Text('Enlace copiado')),
+                );
+              },
+              child: Padding(
+                padding: const EdgeInsets.symmetric(vertical: 2),
+                child: Text(
+                  r,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: const TextStyle(color: AurumColors.amber, fontSize: 12),
+                ),
+              ),
+            ),
+        ],
+      ],
+    );
+  }
+
+  Widget _goalCard(BuildContext context, TrainingPlan plan) {
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Expanded(
+                  child: Text(
+                    plan.goalHeadline.isEmpty ? plan.title : plan.goalHeadline,
+                    style: Theme.of(context)
+                        .textTheme
+                        .titleLarge
+                        ?.copyWith(fontWeight: FontWeight.w700),
+                  ),
+                ),
+                Chip(
+                  visualDensity: VisualDensity.compact,
+                  avatar: Icon(
+                    plan.source == 'ai' ? Icons.auto_awesome : Icons.offline_bolt,
+                    size: 16,
+                    color: AurumColors.gold,
+                  ),
+                  label: Text(plan.source == 'ai' ? 'IA' : 'Local'),
+                ),
+              ],
+            ),
+            const SizedBox(height: 4),
+            Text(plan.title, style: const TextStyle(color: AurumColors.gold)),
+            const SizedBox(height: 8),
+            for (final f in plan.goalFacts)
+              Padding(
+                padding: const EdgeInsets.only(bottom: 4),
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Padding(
+                      padding: EdgeInsets.only(top: 6, right: 8),
+                      child: Icon(Icons.circle, size: 6, color: AurumColors.gold),
+                    ),
+                    Expanded(child: Text(f, style: const TextStyle(fontSize: 13))),
+                  ],
+                ),
+              ),
+            if (plan.summary.isNotEmpty) ...[
+              const SizedBox(height: 8),
+              Text(plan.summary,
+                  style: const TextStyle(color: AurumColors.textMuted, fontSize: 12)),
+            ],
+          ],
+        ),
+      ),
+    );
+  }
+
+  /// Barra con las fases del plan y la semana visible marcada.
+  Widget _phaseStrip(TrainingPlan plan, int weekNumber) {
+    final phases = <({String name, int from, int count})>[];
+    for (final w in plan.weeks) {
+      if (phases.isEmpty || phases.last.name != w.phase) {
+        phases.add((name: w.phase, from: w.number, count: 1));
+      } else {
+        final last = phases.removeLast();
+        phases.add((name: last.name, from: last.from, count: last.count + 1));
+      }
+    }
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        for (final ph in phases)
+          Expanded(
+            flex: ph.count,
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 2),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Container(
+                    height: 6,
+                    decoration: BoxDecoration(
+                      color: weekNumber >= ph.from && weekNumber < ph.from + ph.count
+                          ? AurumColors.gold
+                          : (weekNumber >= ph.from + ph.count
+                              ? AurumColors.bronze
+                              : AurumColors.surfaceHigh),
+                      borderRadius: BorderRadius.circular(3),
+                    ),
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    ph.name,
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                    style: TextStyle(
+                      fontSize: 10,
+                      color: weekNumber >= ph.from && weekNumber < ph.from + ph.count
+                          ? AurumColors.gold
+                          : AurumColors.textMuted,
+                    ),
+                  ),
                 ],
               ),
             ),

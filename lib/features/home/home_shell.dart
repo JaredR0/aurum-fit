@@ -7,7 +7,7 @@ import '../photos/photos_screen.dart';
 import '../plan/plan_controller.dart';
 import '../plan/plan_screen.dart';
 import '../progress/progress_screen.dart';
-import '../timer/timer_screen.dart';
+import '../timer/timer_home_screen.dart';
 import 'dashboard_screen.dart';
 
 class HomeShell extends ConsumerStatefulWidget {
@@ -46,7 +46,7 @@ class _HomeShellState extends ConsumerState<HomeShell> {
         children: const [
           DashboardScreen(),
           PlanScreen(),
-          TimerScreen(),
+          TimerHomeScreen(),
           ProgressScreen(),
           PhotosScreen(),
         ],
@@ -58,7 +58,7 @@ class _HomeShellState extends ConsumerState<HomeShell> {
           NavigationDestination(icon: Icon(Icons.today_outlined), selectedIcon: Icon(Icons.today), label: 'Hoy'),
           NavigationDestination(icon: Icon(Icons.fitness_center_outlined), selectedIcon: Icon(Icons.fitness_center), label: 'Plan'),
           NavigationDestination(icon: Icon(Icons.timer_outlined), selectedIcon: Icon(Icons.timer), label: 'Timer'),
-          NavigationDestination(icon: Icon(Icons.accessibility_new_outlined), selectedIcon: Icon(Icons.accessibility_new), label: 'Mapa'),
+          NavigationDestination(icon: Icon(Icons.emoji_events_outlined), selectedIcon: Icon(Icons.emoji_events), label: 'Progreso'),
           NavigationDestination(icon: Icon(Icons.photo_library_outlined), selectedIcon: Icon(Icons.photo_library), label: 'Fotos'),
         ],
       ),

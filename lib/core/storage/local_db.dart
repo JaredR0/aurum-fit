@@ -20,6 +20,7 @@ class LocalDb {
   static const String steps = 'steps';
   static const String settings = 'settings';
   static const String photoMeta = 'photo_meta';
+  static const String checkins = 'checkins';
 
   /// Las fotos van en una caja "lazy": no se cargan todas a memoria.
   static const String photos = 'photos';
@@ -32,6 +33,7 @@ class LocalDb {
     steps,
     settings,
     photoMeta,
+    checkins,
   ];
 
   static bool _ready = false;
