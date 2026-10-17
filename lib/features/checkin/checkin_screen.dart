@@ -87,7 +87,7 @@ class _CheckinScreenState extends ConsumerState<CheckinScreen> {
       final i = _inputsFor(b);
       switch (b.input) {
         case BenchmarkInput.number:
-          if (i.a.text.trim().isEmpty) continue;
+          if (i.a.text.trim().isEmpty) break;
           final v = InputSanitizer.number(i.a.text, min: 0, max: 100000);
           if (v == null) {
             setState(() => _error = 'Revisa el valor de "${b.label}".');
@@ -96,7 +96,7 @@ class _CheckinScreenState extends ConsumerState<CheckinScreen> {
           values[b.id] = v;
           display[b.id] = b.format(v);
         case BenchmarkInput.weightReps:
-          if (i.a.text.trim().isEmpty && i.b.text.trim().isEmpty) continue;
+          if (i.a.text.trim().isEmpty && i.b.text.trim().isEmpty) break;
           final kg = InputSanitizer.number(i.a.text, min: 1, max: 500);
           final reps = InputSanitizer.number(i.b.text, min: 1, max: 30)?.round();
           if (kg == null || reps == null) {
@@ -107,7 +107,7 @@ class _CheckinScreenState extends ConsumerState<CheckinScreen> {
           values[b.id] = double.parse(oneRm.toStringAsFixed(1));
           display[b.id] = '${kg.toStringAsFixed(kg == kg.roundToDouble() ? 0 : 1)} kg × $reps';
         case BenchmarkInput.time:
-          if (i.a.text.trim().isEmpty) continue;
+          if (i.a.text.trim().isEmpty) break;
           final s = _parseTime(i.a.text);
           if (s == null) {
             setState(() => _error = 'En "${b.label}" usa el formato mm:ss (por ejemplo 5:40).');

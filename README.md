@@ -27,11 +27,12 @@ Cada push a `main` compila el `.apk` en GitHub Actions y lo publica en *Releases
 | Módulo | Detalle |
 |---|---|
 | **Onboarding biométrico** | Sexo, edad, peso (kg/lb), altura (cm/ft), % de grasa, nivel de actividad, lesiones, objetivo con fecha límite y equipo (gimnasio / calistenia / casa, obligatorio). |
-| **Plan inteligente** | Generador **local offline** (Mifflin-St Jeor / Katch-McArdle, macros ISSN, plantillas por objetivo y equipo, adaptación por lesiones) + **IA con búsqueda web** a través del proxy. Rutina por días con series, repeticiones, descansos y tiempos; dieta de 7 días × 5 comidas con macros y alternativas locales. |
-| **Mapa anatómico evolutivo** | Cuerpo vectorial frontal y posterior con 14 grupos musculares tocables. Cada músculo pasa de bronce opaco a oro brillante según consistencia, sobrecarga progresiva y experiencia; el dorado se apaga si dejas de entrenarlo. |
-| **Timer / asistente de voz** | HIIT, Tabata, boxeo, cuerda, personalizado o el circuito del día del plan. Números gigantes, cuenta "5, 4, 3, 2, 1" por voz, instrucciones ("¡Corre 1 kilómetro!"), tonos que bajan el volumen de tu música en lugar de pausarla, vibración y pantalla siempre encendida. |
-| **Podómetro** | Sensor de pasos nativo en tiempo real + Health Connect / HealthKit. Los días marcados en el plan solo cuentan como cumplidos al llegar a la meta de pasos. |
-| **Hidratación** | Registro diario con meta por peso corporal y recordatorios. |
+| **Plan periodizado por objetivo** | Analiza tu meta en texto libre (volcanes de Guatemala con desnivel, horas y mochila; 5k/10k/21k/42k; kilos a ganar o perder; 1RM objetivo) y genera **semana por semana** con fases (base → construcción → específica → puesta a punto), progresión, descarga cada 4.ª semana, ejercicios que rotan por bloque y el día de la meta al final. Con IA (proxy) usa además búsqueda de evidencia. Dieta de 7 días × 5 comidas con macros y alternativas locales. |
+| **Check-in semanal y logros** | Evaluación inicial y un check-in cada semana con pruebas según tu objetivo y equipo (caminata más larga, mochila, desnivel, km, ritmo, 1RM estimado, flexiones, dominadas, plancha, cintura, peso). Calcula tu **preparación para la meta**, récords personales e insignias, y si reportas dolor o poca energía la semana siguiente pasa a descarga. Recordatorio cada sábado. |
+| **Mapa anatómico evolutivo** | Cuerpo vectorial frontal y posterior con 14 grupos musculares tocables. Cada músculo pasa de bronce opaco a oro brillante según consistencia, sobrecarga progresiva (volumen registrado **y** récords del check-in) y experiencia; el dorado se apaga si dejas de entrenarlo. |
+| **Timer con dos modos** | **Mi objetivo**: la sesión de hoy guiada y circuitos diseñados para tu meta que escalan con tu semana (p. ej. escaleras con mochila, piernas para la bajada). **Libre**: ~28 circuitos de gimnasio, calistenia, casa, HIIT, boxeo, cardio, movilidad y core para entrenar lo que quieras sin tocar el plan. Voz con cuenta regresiva, tonos que atenúan la música, vibración y pantalla encendida; al terminar puedes registrar la sesión para que cuente en el mapa. |
+| **Pasos con meta clara** | Sensor nativo + Health Connect / HealthKit. Muestra pasos de hoy, meta (sugerida según el objetivo y editable), cuánto falta en pasos, km y minutos, y si el día del plan exige la meta. |
+| **Agua con meta clara** | Meta automática (35 ml/kg + extra en días de entrenamiento y sesiones largas) o personalizada, vasos visuales, cuánto falta y cuánto deberías llevar a esta hora. |
 | **Fotos de progreso** | Guardadas cifradas dentro de la app (no en la galería), comparación antes/después. |
 | **Recordatorios locales** | Comidas, agua y entrenamiento, sin servicios de push en la nube. |
 
@@ -52,9 +53,10 @@ aurum_fit/
 │   └── features/
 │       ├── auth/                    PIN + biometría, pantalla de bloqueo
 │       ├── onboarding/              Perfil biométrico y objetivo
-│       ├── plan/                    Modelos, generador local, cliente del proxy, UI
+│       ├── plan/                    Análisis del objetivo, plan periodizado, cliente del proxy, UI
+│       ├── checkin/                 Check-in semanal, pruebas, récords, insignias
 │       ├── progress/                Motor de progreso + mapa anatómico (CustomPainter)
-│       ├── timer/                   Máquina de estados de intervalos + voz/tonos
+│       ├── timer/                   Intervalos + voz/tonos, circuitos del objetivo y biblioteca libre
 │       ├── steps/                   Podómetro y Health Connect/HealthKit
 │       ├── hydration/  photos/  notifications/  home/
 ├── proxy/                           Cloudflare Worker: guarda la clave de IA
